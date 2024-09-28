@@ -156,9 +156,9 @@ public class Network {
 				clearGradients();
 				for(int i = 0; i < batchSize; i++){
 					int trainImageIndex = indexList.get(i);
-					double[] inputVector = trainImages[i];
+					double[] inputVector = trainImages[trainImageIndex];
 					double[] targetVector = new double[outputSize]; // create target vector
-					int label = trainLabels[i];
+					int label = trainLabels[trainImageIndex];
 					targetVector[label] = 1.0;
 					
 					forward(inputVector); // get output vectors with probability distribution 
