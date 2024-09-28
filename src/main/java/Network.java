@@ -2,6 +2,9 @@
  * @author RusFortunat, i.e., Ruslan Mukhamadiarov
  */
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 
 // at the moment just 1 hidden layer, generalization will come later
 public class Network {
@@ -16,17 +19,15 @@ public class Network {
     private double[] firstLayerBiases;
     private double[][] secondLayerWeights;
     private double[] secondLayerBiases;
-	// Defined here because we will use stochastic gradient descent optimization -- 
-	// collect error from minibatches before backpropagating it
+	// it's ugly to define helping arrays here, but i'm not sure it will look better if we will be passing them around 
 	private double[][] GRADfirstLayerWeights;
     private double[] GRADfirstLayerBiases;
     private double[][] GRADsecondLayerWeights;
     private double[] GRADsecondLayerBiases;
 	
 	// constructor; initialize a fully-connected neural network with random weights and biases
-    public Network(double learningRate, int minibatchSize, int inputSize, int hiddenSize, int outputSize){
+    public Network(double learningRate, int inputSize, int hiddenSize, int outputSize){
         this.learningRate = learningRate;
-		this.minibatchSize = minibatchSize;
         this.inputSize = inputSize;
         this.hiddenSize = hiddenSize;
         this.outputSize = outputSize;
@@ -85,7 +86,7 @@ public class Network {
         for(Double element:outputVector) sum += Math.exp(element);
         for(Double element:outputVector) element = Math.exp(element) / sum;
     }
-    
+	
 	
     // Backpropagation; The math behind it is nicely explained in 3b1b youtube video on this topic
     public void computeGradients(double[] inputVector, double[] targetVector, int batchSize){
@@ -139,17 +140,72 @@ public class Network {
     }	
 	
 	
-	public void train(Object trainImages, Object trainLabels, int minibatchSize){
-		
-		
+	public void train(ReadData trainDataMNIST, int trainingEpisodes, int batchSize){
+		double[][] trainImages = trainDataMNIST.getImages();
+		int[] trainLabels = trainDataMNIST.getLabels();
+		for(int episode = 0; episode < trainingEpisodes; episode++){
+			double loss = 0; // should decrease
+			
+			// we will use this shuffle the dataset to have different minibatches each training episode
+			long seed = System.nanoTime();
+			ArrayList<Integer> indexList = new ArrayList<>();
+			for(int i = 0; i < trainImages.length; i++) indexList.add(i);
+			Collections.shuffle(indexList, new Random(seed));
+			
+			for(int minibatch = 0; minibatch < trainImages.length / batchSize; minibatch++){
+				clearGradients();
+				for(int i = 0; i < batchSize; i++){
+					int trainImageIndex = indexList.get(i);
+					double[] inputVector = trainImages[i];
+					double[] targetVector = new double[outputSize]; // create target vector
+					int label = trainLabels[i];
+					targetVector[label] = 1.0;
+					
+					forward(inputVector); // get output vectors with probability distribution 
+					computeGradients(inputVector, targetVector, batchSize); // compare target and output vectors
+					for(int i = 0; i < outputSize; i++) loss += (1.0/trainImages.length)*Math.pow(outputVector[i] - targetVector[i],2);
+				}
+				backpropagateError(); // backpropagate accumulated error; optimize.step() in PyTorch
+			}
+			System.out.println("Episode: " + episode + ", loss = " + loss);
+		}
+		System.out.println("The training of neural network is done.");
 	}
 	
-	public void test(Object testImages, Object testLabels){
+	public void test(ReadData testDataMNIST){
+		double[][] testImages = testDataMNIST.getImages();
+		int[] testLabels = testDataMNIST.getLabels();
 		
-		
+		int correct = 0;
+		for(int image = 0; image < testImages.length; image++){
+			double[] inputVector = testImages[image];
+			int target = testLabels[image];
+			
+			forward(inputVector);
+			int maxValue = Arrays.stream(outputVector).max().getAsInt();
+			if(maxValue == target) correct++; 
+		}
+		System.out.println("Fraction of correctly predicted images: " + (1.0*correct/testImages.length))
 	}
 	
 	public Object[] getNetworkParameteres(){
         return new Object[]{firstLayerWeights, firstLayerBiases, secondLayerWeights, secondLayerBiases};
+    }
+	
+	public void clearGradients()
+        // first layer W1 & B1
+        for(int i = 0; i < hiddenSize; i++){
+            for(int j = 0; j < inputSize; j++){
+                GRADfirstLayerWeights[i][j] = 0;
+            }
+            GRADfirstLayerBiases[i] = 0;
+        }
+        // second layer W2 & W2
+        for(int i = 0; i < outputSize; i++){
+            for(int j = 0; j < hiddenSize; j++){
+                GRADsecondLayerWeights[i][j] = 0;
+            }
+            GRADsecondLayerBiases[i] = 0;
+        }
     }
 }
