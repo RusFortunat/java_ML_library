@@ -9,27 +9,40 @@ public class Network {
     private int inputSize;
     private int hiddenSize;
     private int outputSize;
+    private double[] hiddenVector; 
+    private double[] outputVector;
+	// NN params
     private double[][] firstLayerWeights;
     private double[] firstLayerBiases;
     private double[][] secondLayerWeights;
     private double[] secondLayerBiases;
-    private double[] hiddenVector;
-    private double[] outputVector;
-    
-    // initialize a fully-connected neural network with random weights and biases
-    public Network(double learningRate, int inputSize, int hiddenSize, int outputSize){
+	// Defined here because we will use stochastic gradient descent optimization -- 
+	// collect error from minibatches before backpropagating it
+	private double[][] GRADfirstLayerWeights;
+    private double[] GRADfirstLayerBiases;
+    private double[][] GRADsecondLayerWeights;
+    private double[] GRADsecondLayerBiases;
+	
+	// constructor; initialize a fully-connected neural network with random weights and biases
+    public Network(double learningRate, int minibatchSize, int inputSize, int hiddenSize, int outputSize){
         this.learningRate = learningRate;
+		this.minibatchSize = minibatchSize;
         this.inputSize = inputSize;
         this.hiddenSize = hiddenSize;
         this.outputSize = outputSize;
+        this.hiddenVector = new double[hiddenSize];
+        this.outputVector = new double[outputSize];
         this.firstLayerWeights = new double[inputSize][hiddenSize];
         this.firstLayerBiases = new double[hiddenSize];
         this.secondLayerWeights = new double[hiddenSize][outputSize];
         this.secondLayerBiases = new double[outputSize];
-        this.hiddenVector = new double[hiddenSize];
-        this.outputVector = new double[outputSize];
-        
-        double rangeW1 = 1.0/inputSize; // it is a good practice to limit distribution to inverse vector size 
+		this.GRADfirstLayerWeights = new double[inputSize][hiddenSize];
+		this.GRADfirstLayerBiases = new double[hiddenSize];
+		this.GRADsecondLayerWeights = new double[hiddenSize][outputSize];
+		this.GRADsecondLayerBiases = new double[outputSize];
+		
+        // it is a good practice to limit distribution to inverse vector size 
+        double rangeW1 = 1.0/inputSize; 
         for(int j = 0; j < hiddenSize; j++){
             firstLayerBiases[j] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
             for(int i = 0; i < hiddenSize; i++) {
@@ -45,6 +58,7 @@ public class Network {
         }
     }
     
+	
     // implements feed-forward propagation with ReLU activation
     public void forward(double[] input){
         // compute hidden activation values
@@ -72,14 +86,9 @@ public class Network {
         for(Double element:outputVector) element = Math.exp(element) / sum;
     }
     
-    // Implements error backpropagation: computes the error and updates the NN parameters accordingly;
-    // Math behind the backpropagation in NNs is nicely explained in 3b1b youtube video on this topic
-    public void backpropagateError(double[] inputVector, double[] targetVector, int batchSize){
-        double[][] GRADfirstLayerWeights = new double[inputSize][hiddenSize];
-        double[] GRADfirstLayerBiases = new double[hiddenSize];
-        double[][] GRADsecondLayerWeights = new double[hiddenSize][outputSize];
-        double[] GRADsecondLayerBiases = new double[outputSize];
-
+	
+    // Backpropagation; The math behind it is nicely explained in 3b1b youtube video on this topic
+    public void computeGradients(double[] inputVector, double[] targetVector, int batchSize){
         // Second(final) layer W2 & B2 gradients
         for(int i=0; i < outputSize; i++){
             if(outputVector[i] > 0){ // comes from ReLU's derivative
@@ -108,8 +117,11 @@ public class Network {
                 GRADfirstLayerBiases[i] += (1.0/batchSize) * secondLayerGrad;
             }
         }
-
-        // update neural network parameters
+	}
+	
+	
+    // update neural network parameters, i.e., optimizer 
+	public void backpropagateError()
         // first layer W1 & B1
         for(int i = 0; i < hiddenSize; i++){
             for(int j = 0; j < inputSize; j++){
@@ -124,9 +136,20 @@ public class Network {
             }
             secondLayerBiases[i] -= learningRate * GRADsecondLayerBiases[i];
         }
-    }
-
-    public Object[] networkParameteres(){
+    }	
+	
+	
+	public void train(Object trainImages, Object trainLabels, int minibatchSize){
+		
+		
+	}
+	
+	public void test(Object testImages, Object testLabels){
+		
+		
+	}
+	
+	public Object[] getNetworkParameteres(){
         return new Object[]{firstLayerWeights, firstLayerBiases, secondLayerWeights, secondLayerBiases};
     }
 }
