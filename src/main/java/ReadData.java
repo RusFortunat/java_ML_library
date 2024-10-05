@@ -64,4 +64,9 @@ public class ReadData {
     public int[] getLabels(){
         return labels;
     }
+	
+	public void printImage(int image){
+		System.out.println("Image: ");
+		for()
+	}
 }

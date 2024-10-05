@@ -74,6 +74,7 @@ public class Network {
             hiddenVector[i] = sum;
         }
         // compute output activations
+        double totalSum = 0;
         for(int i = 0; i < outputSize; i++){
             double sum = 0;
             for(int j = 0; j < hiddenSize; j++){
@@ -81,12 +82,11 @@ public class Network {
                 if(activation > 0) sum+= activation; // ReLU activation
             }
             outputVector[i] = sum;
+			totalSum += Math.exp(sum); 
         }
 
         // SoftMax
-        double sum = 0;
-        for(Double element:outputVector) sum += Math.exp(element);
-        for(Double element:outputVector) element = Math.exp(element) / sum;
+        for(Double element:outputVector) element = Math.exp(element) / totalSum;
     }
 	
 	
@@ -155,19 +155,19 @@ public class Network {
             Collections.shuffle(indexList, new Random(seed));
 
             for(int minibatch = 0; minibatch < trainImages.length / batchSize; minibatch++){
-                    clearGradients();
-                    for(int i = 0; i < batchSize; i++){
-                            int trainImageIndex = indexList.get(i);
-                            double[] inputVector = trainImages[trainImageIndex];
-                            double[] targetVector = new double[outputSize]; // create target vector
-                            int label = trainLabels[trainImageIndex];
-                            targetVector[label] = 1.0;
+				clearGradients();
+				for(int i = 0; i < batchSize; i++){
+					int trainImageIndex = indexList.get(i);
+					double[] inputVector = trainImages[trainImageIndex];
+					double[] targetVector = new double[outputSize]; // create target vector
+					int label = trainLabels[trainImageIndex];
+					targetVector[label] = 1.0;
 
-                            forward(inputVector); // get output vectors with probability distribution 
-                            computeGradients(inputVector, targetVector, batchSize); // compare target and output vectors
-                            for(int k = 0; k < outputSize; k++) loss += (1.0/trainImages.length)*Math.pow(outputVector[k] - targetVector[k],2);
-                    }
-                    backpropagateError(); // backpropagate accumulated error; optimize.step() in PyTorch
+					forward(inputVector); // get output vectors with probability distribution 
+					computeGradients(inputVector, targetVector, batchSize); // compare target and output vectors
+					for(int k = 0; k < outputSize; k++) loss += (1.0/trainImages.length)*Math.pow(outputVector[k] - targetVector[k],2);
+				}
+				backpropagateError(); // backpropagate accumulated error; optimize.step() in PyTorch
             }
             System.out.println("Episode: " + episode + ", loss = " + loss);
         }
@@ -184,7 +184,7 @@ public class Network {
             int target = testLabels[image];
 
             forward(inputVector);
-            int maxLabel = getMaxValue();
+            int maxLabel = getMaxIndex();
             //int maxValue = Arrays.stream(outputVector).max().getAsInt(); // WRONG!! YOU NEED INDEX
             if(maxLabel == target) correct++; 
         }
@@ -195,7 +195,7 @@ public class Network {
         return new Object[]{firstLayerWeights, firstLayerBiases, secondLayerWeights, secondLayerBiases};
     }
 	
-    public int getMaxValue(){
+    public int getMaxIndex(){
         int maxIndex = 0;
         double maxValue = 0;
         for(int i = 0; i < outputVector.length; i++){
