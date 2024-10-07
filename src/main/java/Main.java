@@ -7,12 +7,12 @@ public class Main {
 	public static void main(String[] args){
 		
 		// Neural Network parameters 
-		double learningRate = 0.001; // good practice to keep it small, between 0.001-0.0001
+		double learningRate = 0.005; // good practice to keep it small, between 0.001-0.0001
 		int inputSize = 28*28; // images sizes
 		int hiddenSize = 128;
 		int outputSize = 10; // number of possible labels
 		int batchSize = 100; // we will split the whole data set to minibatches for efficient training
-		int trainingEpisodes = 10; // select how long you want to train your neural network
+		int trainingEpisodes = 20; // select how long you want to train your neural network
 		
 		Network imageClassifierNet = new Network(learningRate, inputSize, hiddenSize, outputSize);
 		

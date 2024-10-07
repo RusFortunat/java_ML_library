@@ -26,19 +26,19 @@ public class ReadData {
         int numberOfItems = dataInputStream.readInt();
         int nRows = dataInputStream.readInt();
         int nCols = dataInputStream.readInt();
-
+        /*
 	System.out.println("magic number is " + magicNumber);
         System.out.println("number of items is " + numberOfItems);
         System.out.println("number of rows is: " + nRows);
         System.out.println("number of cols is: " + nCols);
-
+        */
         DataInputStream labelInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(labelsPath)));
         int labelMagicNumber = labelInputStream.readInt();
         int numberOfLabels = labelInputStream.readInt();
-
+        /*
 	System.out.println("labels magic number is: " + labelMagicNumber);
         System.out.println("number of labels is: " + numberOfLabels);
-
+        */
 
         assert datasetSize == numberOfLabels;
 
@@ -48,10 +48,11 @@ public class ReadData {
 			
             for (int r = 0; r < nRows; r++) {
                 for (int c = 0; c < nCols; c++) {
-                    image[r*nCols + c] = dataInputStream.readUnsignedByte();
+                    image[r*nCols + c] = dataInputStream.readUnsignedByte() / 255.0;
                 }
             }
             images[i] = image;
+            //printImage(i, nRows, nCols); // check if the data is loaded properly -- words so far i can tell
         }
         dataInputStream.close();
         labelInputStream.close();
@@ -65,8 +66,15 @@ public class ReadData {
         return labels;
     }
 	
-	public void printImage(int image){
-		System.out.println("Image: ");
-		for()
-	}
+    public void printImage(int image, int nRows, int nCols){
+        System.out.println("Image: " + image);
+        for(int row = 0; row < nRows; row++){
+            for(int col = 0; col < nCols; col++){
+                double pixel = images[image][row*nCols + col];
+                System.out.print(pixel + " ");
+            }
+            System.out.print("\n");
+        }
+        System.out.println("");
+    }
 }

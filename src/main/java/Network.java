@@ -27,7 +27,7 @@ public class Network {
     private double[][] GRADsecondLayerWeights;
     private double[] GRADsecondLayerBiases;
 	
-	// constructor; initialize a fully-connected neural network with random weights and biases
+    // constructor; initialize a fully-connected neural network with random weights and biases
     public Network(double learningRate, int inputSize, int hiddenSize, int outputSize){
         this.learningRate = learningRate;
         this.inputSize = inputSize;
@@ -47,18 +47,20 @@ public class Network {
         // it is a good practice to limit distribution to inverse vector size 
         double rangeW1 = 1.0/inputSize; 
         for(int i = 0; i < hiddenSize; i++){
-            firstLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
+            //firstLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
             for(int j = 0; j < hiddenSize; j++) {
                 firstLayerWeights[i][j] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
             }
         }
         double rangeW2 = 1.0/hiddenSize;
         for(int i = 0; i < outputSize; i++){
-            secondLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW2,rangeW2);
+            //secondLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW2,rangeW2);
             for(int j = 0; j < hiddenSize; j++) {
                 secondLayerWeights[i][j] = ThreadLocalRandom.current().nextDouble(-rangeW2,rangeW2);
             }
         }
+        //System.out.println("Check that NN parameters are initialized properly:");
+        //printNetworkParameteres();
     }
     
 	
@@ -74,19 +76,21 @@ public class Network {
             hiddenVector[i] = sum;
         }
         // compute output activations
-        double totalSum = 0;
+        double totalSum = 0.0;
         for(int i = 0; i < outputSize; i++){
             double sum = 0;
             for(int j = 0; j < hiddenSize; j++){
-                double activation = secondLayerWeights[i][j]*input[j] + secondLayerBiases[i];
+                double activation = secondLayerWeights[i][j]*hiddenVector[j] + secondLayerBiases[i];
                 if(activation > 0) sum+= activation; // ReLU activation
             }
             outputVector[i] = sum;
-			totalSum += Math.exp(sum); 
+            totalSum += Math.exp(sum); 
         }
 
         // SoftMax
-        for(Double element:outputVector) element = Math.exp(element) / totalSum;
+        for(int i = 0; i < outputSize; i++){ 
+            outputVector[i] = Math.exp(outputVector[i]) / totalSum;
+        }
     }
 	
 	
@@ -120,8 +124,7 @@ public class Network {
                 GRADfirstLayerBiases[i] += (1.0/batchSize) * secondLayerGrad;
             }
         }
-	}
-	
+    }
 	
     // update neural network parameters, i.e., optimizer 
     public void backpropagateError(){
@@ -141,9 +144,10 @@ public class Network {
         }
     }	
 	
-	
     public void train(ReadData trainDataMNIST, int trainingEpisodes, int batchSize){
         double[][] trainImages = trainDataMNIST.getImages();
+        double datasetSize = trainImages.length;
+        assert datasetSize != 0;
         int[] trainLabels = trainDataMNIST.getLabels();
         for(int episode = 0; episode < trainingEpisodes; episode++){
             double loss = 0; // should decrease
@@ -153,25 +157,40 @@ public class Network {
             ArrayList<Integer> indexList = new ArrayList<>();
             for(int i = 0; i < trainImages.length; i++) indexList.add(i);
             Collections.shuffle(indexList, new Random(seed));
+            //System.out.println("indexList");
+            //System.out.println(indexList); // works as it should
 
             for(int minibatch = 0; minibatch < trainImages.length / batchSize; minibatch++){
-				clearGradients();
-				for(int i = 0; i < batchSize; i++){
-					int trainImageIndex = indexList.get(i);
-					double[] inputVector = trainImages[trainImageIndex];
-					double[] targetVector = new double[outputSize]; // create target vector
-					int label = trainLabels[trainImageIndex];
-					targetVector[label] = 1.0;
+                clearGradients();
+                //System.out.println("Check that gradients are zeroed:");
+                //printNetworkParameteresGradients();
+                for(int i = 0; i < batchSize; i++){
+                    int trainImageIndex = indexList.get(i);
+                    double[] inputVector = trainImages[trainImageIndex];
+                    double[] targetVector = new double[outputSize]; // create target vector
+                    int label = trainLabels[trainImageIndex];
+                    targetVector[label] = 1.0;
 
-					forward(inputVector); // get output vectors with probability distribution 
-					computeGradients(inputVector, targetVector, batchSize); // compare target and output vectors
-					for(int k = 0; k < outputSize; k++) loss += (1.0/trainImages.length)*Math.pow(outputVector[k] - targetVector[k],2);
-				}
-				backpropagateError(); // backpropagate accumulated error; optimize.step() in PyTorch
+                    forward(inputVector); // get output vectors with probability distribution 
+                    computeGradients(inputVector, targetVector, batchSize); // compare target and output vectors
+                    for(int k = 0; k < outputSize; k++){
+                        //printOutputVector();
+                        //printTargetVector(targetVector);
+                        //System.out.println("contribution to loss: " + (1.0/datasetSize)*Math.pow(outputVector[k] - targetVector[k],2));
+                        loss += (1.0/datasetSize)*Math.pow(outputVector[k] - targetVector[k],2);
+                    } 
+                }
+                //System.out.println("Minibatch: " + minibatch + "; loss " + loss);
+                //System.out.println("Check gradients after batch error collection");
+                //printNetworkParameteresGradients();
+                backpropagateError(); // backpropagate accumulated error; optimize.step() in PyTorch
             }
+            
             System.out.println("Episode: " + episode + ", loss = " + loss);
         }
         System.out.println("The training of neural network is done.");
+        //System.out.println("NN parameters after training");
+        //printNetworkParameteres();
     }
 	
     public void test(ReadData testDataMNIST){
@@ -189,10 +208,6 @@ public class Network {
             if(maxLabel == target) correct++; 
         }
         System.out.println("Fraction of correctly predicted images: " + (1.0*correct/testImages.length));
-    }
-	
-    public Object[] getNetworkParameteres(){
-        return new Object[]{firstLayerWeights, firstLayerBiases, secondLayerWeights, secondLayerBiases};
     }
 	
     public int getMaxIndex(){
@@ -216,5 +231,86 @@ public class Network {
         this.GRADfirstLayerBiases = new double[hiddenSize];
         this.GRADsecondLayerWeights = new double[outputSize][hiddenSize];
         this.GRADsecondLayerBiases = new double[outputSize];
+    }
+
+    public void printNetworkParameteres(){
+        System.out.println("firstLayerWeights:");
+        for(int i = 0; i < hiddenSize; i++){
+            for(int j = 0; j < hiddenSize; j++) {
+                System.out.print(firstLayerWeights[i][j] + " ");
+            }
+            System.out.println("");
+        }
+        System.out.println("\nfirstLayerBiases:");
+        for(int i = 0; i < hiddenSize; i++){
+            System.out.print(firstLayerBiases[i] + " ");
+        }
+        System.out.println("");
+        
+        System.out.println("\nsecondLayerWeights:");
+        for(int i = 0; i < outputSize; i++){
+            for(int j = 0; j < hiddenSize; j++) {
+                System.out.print(secondLayerWeights[i][j] + " ");
+            }
+            System.out.println("");
+        }
+        System.out.println("\nsecondLayerBiases:");
+        for(int i = 0; i < outputSize; i++){
+            System.out.print(secondLayerBiases[i] + " ");
+        }
+        System.out.println("\n");
+    }
+
+    
+    public void printNetworkParameteresGradients(){
+        System.out.println("GRADfirstLayerWeights:");
+        for(int i = 0; i < hiddenSize; i++){
+            for(int j = 0; j < hiddenSize; j++) {
+                System.out.print(GRADfirstLayerWeights[i][j] + " ");
+            }
+            System.out.println("");
+        }
+        System.out.println("\nGRADfirstLayerBiases:");
+        for(int i = 0; i < hiddenSize; i++){
+            System.out.print(GRADfirstLayerBiases[i] + " ");
+        }
+        System.out.println("");
+        
+        System.out.println("\nGRADsecondLayerWeights:");
+        for(int i = 0; i < outputSize; i++){
+            for(int j = 0; j < hiddenSize; j++) {
+                System.out.print(GRADsecondLayerWeights[i][j] + " ");
+            }
+            System.out.println("");
+        }
+        System.out.println("\nGRADsecondLayerBiases:");
+        for(int i = 0; i < outputSize; i++){
+            System.out.print(GRADsecondLayerBiases[i] + " ");
+        }
+        System.out.println("\n");
+    }
+    
+    public void printHiddenVector(){
+        System.out.println("Hidden vector:");
+        for(int i = 0; i < hiddenSize; i++){
+            System.out.print(hiddenVector[i] + " ");
+        }
+        System.out.println("");
+    }
+    
+    public void printOutputVector(){
+        System.out.println("Output vector:");
+        for(int i = 0; i < outputSize; i++){
+            System.out.print(outputVector[i] + " ");
+        }
+        System.out.println("");
+    }
+    
+    public void printTargetVector(double[] targetVector){
+        System.out.println("Target vector:");
+        for(int i = 0; i < outputSize; i++){
+            System.out.print(targetVector[i] + " ");
+        }
+        System.out.println("");
     }
 }
