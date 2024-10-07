@@ -7,7 +7,7 @@ public class Main {
 	public static void main(String[] args){
 		
 		// Neural Network parameters 
-		double learningRate = 0.005; // good practice to keep it small, between 0.001-0.0001
+		double learningRate = 0.003; // good practice to keep it small, between 0.001-0.0001
 		int inputSize = 28*28; // images sizes
 		int hiddenSize = 128;
 		int outputSize = 10; // number of possible labels

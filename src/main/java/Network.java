@@ -21,7 +21,7 @@ public class Network {
     private double[] firstLayerBiases;
     private double[][] secondLayerWeights;
     private double[] secondLayerBiases;
-    // it's ugly to define helping arrays here, but i'm not sure it will look better if we will be passing them around 
+    // ugly, but i'm not sure it will look better if we will be passing them from method to method 
     private double[][] GRADfirstLayerWeights;
     private double[] GRADfirstLayerBiases;
     private double[][] GRADsecondLayerWeights;
@@ -62,10 +62,15 @@ public class Network {
         //System.out.println("Check that NN parameters are initialized properly:");
         //printNetworkParameteres();
     }
-    
 	
     // implements feed-forward propagation with ReLU activation
     public void forward(double[] input){
+        // forwardprop is very simple really; just do the following:
+        // 1. Compute [z] = [firstLayerWeights][input] + [firstLayerBiases];
+        // 2. Obtain the activation values of the hidden vector [y] by applying to [z] some activation function f([z]). 
+        //    Here we use ReLU activation: f(z) > 0 ? z : 0;
+        // 3. Repeat for the next layer with secondLayerWeights and secondLayerBiases to get the [output] vector.
+        
         // compute hidden activation values
         for(int i = 0; i < hiddenSize; i++){
             double sum = 0;
@@ -91,8 +96,7 @@ public class Network {
         for(int i = 0; i < outputSize; i++){ 
             outputVector[i] = Math.exp(outputVector[i]) / totalSum;
         }
-    }
-	
+    }	
 	
     // Backpropagation; The math behind it is nicely explained in 3b1b youtube video on this topic
     public void computeGradients(double[] inputVector, double[] targetVector, int batchSize){
@@ -127,7 +131,7 @@ public class Network {
     }
 	
     // update neural network parameters, i.e., optimizer 
-    public void backpropagateError(){
+    public void backpropagateError(){       
         // first layer W1 & B1
         for(int i = 0; i < hiddenSize; i++){
             for(int j = 0; j < inputSize; j++){
@@ -150,20 +154,16 @@ public class Network {
         assert datasetSize != 0;
         int[] trainLabels = trainDataMNIST.getLabels();
         for(int episode = 0; episode < trainingEpisodes; episode++){
-            double loss = 0; // should decrease
+            double loss = 0; // should decrease as training goes on
 
             // we will use this shuffle the dataset to have different minibatches each training episode
             long seed = System.nanoTime();
             ArrayList<Integer> indexList = new ArrayList<>();
             for(int i = 0; i < trainImages.length; i++) indexList.add(i);
             Collections.shuffle(indexList, new Random(seed));
-            //System.out.println("indexList");
-            //System.out.println(indexList); // works as it should
-
+            
             for(int minibatch = 0; minibatch < trainImages.length / batchSize; minibatch++){
                 clearGradients();
-                //System.out.println("Check that gradients are zeroed:");
-                //printNetworkParameteresGradients();
                 for(int i = 0; i < batchSize; i++){
                     int trainImageIndex = indexList.get(i);
                     double[] inputVector = trainImages[trainImageIndex];
@@ -173,20 +173,12 @@ public class Network {
 
                     forward(inputVector); // get output vectors with probability distribution 
                     computeGradients(inputVector, targetVector, batchSize); // compare target and output vectors
-                    for(int k = 0; k < outputSize; k++){
-                        //printOutputVector();
-                        //printTargetVector(targetVector);
-                        //System.out.println("contribution to loss: " + (1.0/datasetSize)*Math.pow(outputVector[k] - targetVector[k],2));
-                        loss += (1.0/datasetSize)*Math.pow(outputVector[k] - targetVector[k],2);
-                    } 
+                    for(int k = 0; k < outputSize; k++) loss += (1.0/datasetSize)*Math.pow(outputVector[k] - targetVector[k],2); // compute loss
                 }
-                //System.out.println("Minibatch: " + minibatch + "; loss " + loss);
-                //System.out.println("Check gradients after batch error collection");
-                //printNetworkParameteresGradients();
                 backpropagateError(); // backpropagate accumulated error; optimize.step() in PyTorch
             }
             
-            System.out.println("Episode: " + episode + ", loss = " + loss);
+            System.out.println("Episode: " + (episode+1) + ", loss = " + loss);
         }
         System.out.println("The training of neural network is done.");
         //System.out.println("NN parameters after training");
@@ -203,8 +195,10 @@ public class Network {
             int target = testLabels[image];
 
             forward(inputVector);
+            //printOutputVector();
             int maxLabel = getMaxIndex();
-            //int maxValue = Arrays.stream(outputVector).max().getAsInt(); // WRONG!! YOU NEED INDEX
+            //System.out.println("maxLabel: " + maxLabel);
+            //System.out.println("Target: " + target);
             if(maxLabel == target) correct++; 
         }
         System.out.println("Fraction of correctly predicted images: " + (1.0*correct/testImages.length));
@@ -212,8 +206,8 @@ public class Network {
 	
     public int getMaxIndex(){
         int maxIndex = 0;
-        double maxValue = 0;
-        for(int i = 0; i < outputVector.length; i++){
+        double maxValue = outputVector[0];
+        for(int i = 1; i < outputVector.length; i++){
             if(outputVector[i] > maxValue){
                 maxValue = outputVector[i];
                 maxIndex = i;        
