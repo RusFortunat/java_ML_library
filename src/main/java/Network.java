@@ -48,7 +48,7 @@ public class Network {
         double rangeW1 = 1.0/inputSize; 
         for(int i = 0; i < hiddenSize; i++){
             //firstLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
-            for(int j = 0; j < hiddenSize; j++) {
+            for(int j = 0; j < inputSize; j++) {
                 firstLayerWeights[i][j] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
             }
         }
