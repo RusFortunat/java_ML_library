@@ -1,12 +1,13 @@
 /**
  * @author RusFortunat, i.e., Ruslan Mukhamadiarov
  */
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.Random;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.OptionalInt;
 
 // at the moment just 1 hidden layer, generalization will come later
 public class Network {
@@ -14,6 +15,7 @@ public class Network {
     private int inputSize;
     private int hiddenSize;
     private int outputSize;
+    private double predictionAccuracy;
     private double[] hiddenVector; 
     private double[] outputVector;
     // NN params
@@ -47,20 +49,16 @@ public class Network {
         // it is a good practice to limit distribution to inverse vector size 
         double rangeW1 = 1.0/inputSize; 
         for(int i = 0; i < hiddenSize; i++){
-            //firstLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
             for(int j = 0; j < inputSize; j++) {
                 firstLayerWeights[i][j] = ThreadLocalRandom.current().nextDouble(-rangeW1,rangeW1);
             }
         }
         double rangeW2 = 1.0/hiddenSize;
         for(int i = 0; i < outputSize; i++){
-            //secondLayerBiases[i] = ThreadLocalRandom.current().nextDouble(-rangeW2,rangeW2);
             for(int j = 0; j < hiddenSize; j++) {
                 secondLayerWeights[i][j] = ThreadLocalRandom.current().nextDouble(-rangeW2,rangeW2);
             }
         }
-        //System.out.println("Check that NN parameters are initialized properly:");
-        //printNetworkParameteres();
     }
 	
     // implements feed-forward propagation with ReLU activation
@@ -148,7 +146,7 @@ public class Network {
         }
     }	
 	
-    public void train(ReadData trainDataMNIST, int trainingEpisodes, int batchSize){
+    public void train(MNISTImageData trainDataMNIST, int trainingEpisodes, int batchSize){
         double[][] trainImages = trainDataMNIST.getImages();
         double datasetSize = trainImages.length;
         assert datasetSize != 0;
@@ -181,11 +179,9 @@ public class Network {
             System.out.println("Episode: " + (episode+1) + ", loss = " + loss);
         }
         System.out.println("The training of neural network is done.");
-        //System.out.println("NN parameters after training");
-        //printNetworkParameteres();
     }
 	
-    public void test(ReadData testDataMNIST){
+    public void test(MNISTImageData testDataMNIST){
         double[][] testImages = testDataMNIST.getImages();
         int[] testLabels = testDataMNIST.getLabels();
 
@@ -195,13 +191,11 @@ public class Network {
             int target = testLabels[image];
 
             forward(inputVector);
-            //printOutputVector();
             int maxLabel = getMaxIndex();
-            //System.out.println("maxLabel: " + maxLabel);
-            //System.out.println("Target: " + target);
             if(maxLabel == target) correct++; 
         }
-        System.out.println("Fraction of correctly predicted images: " + (1.0*correct/testImages.length));
+        predictionAccuracy = 1.0*correct/testImages.length;
+        System.out.println("Fraction of correctly predicted images: " + predictionAccuracy);
     }
 	
     public int getMaxIndex(){
@@ -226,6 +220,55 @@ public class Network {
         this.GRADsecondLayerWeights = new double[outputSize][hiddenSize];
         this.GRADsecondLayerBiases = new double[outputSize];
     }
+
+
+    // save network parameters to a file, in a coma-separated fashion
+    public void saveNetworkParameters(String filename){
+
+        try{
+            FileWriter file = new FileWriter(filename);
+
+            // metadata
+            file.write("Input layer size: " + inputSize
+                    + "; Hidden layer size: " + hiddenSize + "; Output layer size: " + outputSize + "\n");
+            file.write("Prediction accuracy: " + predictionAccuracy + "\n\n");
+
+            file.write("First layer weights:\n");
+            for(int i = 0; i < hiddenSize; i++){
+                for(int j = 0; j < hiddenSize; j++) {
+                    file.write(firstLayerWeights[i][j] + ",");
+                }
+            }
+            file.write("\n\n");
+
+            file.write("First layer biases:\n");
+            for(int i = 0; i < hiddenSize; i++){
+                file.write(firstLayerBiases[i] + ",");
+            }
+            file.write("\n\n");
+
+            file.write("Second layer weights:\n");
+            for(int i = 0; i < outputSize; i++){
+                for(int j = 0; j < hiddenSize; j++) {
+                    file.write(secondLayerWeights[i][j] + ",");
+                }
+            }
+            file.write("\n\n");
+
+            file.write("Second layer biases:\n");
+            for(int i = 0; i < outputSize; i++){
+                file.write(secondLayerBiases[i] + ",");
+            }
+
+            file.close();
+
+        }catch(Exception e){
+            System.out.println(e.getMessage());
+        }
+    }
+
+
+    // printers -- were used in the debug phase
 
     public void printNetworkParameteres(){
         System.out.println("firstLayerWeights:");
